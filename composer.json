@@ -1,0 +1,16 @@
+{
+  "name": "drupal/openid_connect_sso",
+  "type": "drupal-module",
+  "description": "Provides basic SSO functionality. Also contains configuration UI for creating an SSO system.",
+  "keywords": ["Drupal", "oauth", "openid_connect"],
+  "license": "GPL-2.0+",
+  "homepage": "https://github.com/frega/openid_connect_sso",
+  "minimum-stability": "dev",
+  "support": {
+    "issues": "https://github.com/frega/openid_connect_sso/issues",
+    "source": "https://github.com/frega/openid_connect_sso"
+  },
+  "require": {
+    "drupal/openid_connect": "^8.1@beta"
+  }
+}

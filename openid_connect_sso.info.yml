@@ -1,0 +1,6 @@
+name: OpenID Connect Single Sign-On
+type: module
+description: Provides basic SSO functionality. Also contains configuration UI for creating an SSO system.
+core: 8.x
+package: "OAuth2"
+configure: openid_connect_sso.openid_connect_sso_settings_form

@@ -1,0 +1,6 @@
+services:
+  openid_connect_sso.route_subscriber:
+    class: Drupal\openid_connect_sso\Routing\RouteSubscriber
+    tags:
+      - { name: event_subscriber }
+

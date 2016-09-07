@@ -1,0 +1,3 @@
+administer openid_connect_sso:
+  title: 'Administer openid_connect_sso'
+  restrict access: true

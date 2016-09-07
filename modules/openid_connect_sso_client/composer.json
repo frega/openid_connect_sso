@@ -1,0 +1,17 @@
+{
+  "name": "drupal/openid_connect_sso_client",
+  "type": "drupal-module",
+  "description": "Overrides basic user functions to enable SSO functionality for client sites: login and logout redirects, user profile editing permissions, and SSO authorization client.",
+  "keywords": ["Drupal", "oauth", "openid_connect"],
+  "license": "GPL-2.0+",
+  "homepage": "https://github.com/frega/openid_connect_sso",
+  "minimum-stability": "dev",
+  "support": {
+    "issues": "https://github.com/frega/openid_connect_sso/issues",
+    "source": "https://github.com/frega/openid_connect_sso"
+  },
+  "require": {
+    "drupal/openid_connect": "^8.1@beta",
+    "drupal/openid_connect_sso": "8.x-1.x-dev"
+  }
+}

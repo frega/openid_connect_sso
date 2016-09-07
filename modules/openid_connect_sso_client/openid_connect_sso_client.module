@@ -1,0 +1,95 @@
+<?php
+
+/**
+ * @file
+ * Provides the SSO functionality for client sites.
+ */
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function openid_connect_sso_client_form_openid_connect_sso_settings_form_alter(&$form, &$form_state) {
+  $client_options = array();
+  /** @var \Drupal\openid_connect\Plugin\OpenIDConnectClientManager $pluginManager */
+  $pluginManager = \Drupal::service('plugin.manager.openid_connect_client.processor');
+
+  $clients = $pluginManager->getDefinitions();
+  foreach ($clients as $plugin_id => $info) {
+    $client_options[$plugin_id] = $plugin_id;
+  }
+
+  $url = \Drupal\Core\Url::fromUri('internal:/admin/config/services/openid-connect');
+  $sso_client_id = \Drupal::config('openid_connect_sso_client')->get('client_id');
+
+  $form['openid_connect_sso_client_id'] = array(
+    '#type' => 'select',
+    '#title' => t('OpenID Connect client'),
+    '#description' => t('Select the client to use for SSO authorization (enable clients in the <a href="@conf_url">OpenID Connect</a> configuration).', array(
+      '@conf_url' => $url->toString(),
+    )),
+    '#options' => $client_options,
+    '#default_value' => $sso_client_id,
+  );
+}
+
+/**
+ * Retrieves all configuration arrays for enabled openid_connect-clients keyed
+ * by client_id.
+ *
+ * @return array
+ */
+function _openid_connect_sso_get_enabled_clients_configuration() {
+  /** @var \Drupal\openid_connect\Plugin\OpenIDConnectClientManager $pluginManager */
+  $pluginManager = \Drupal::service('plugin.manager.openid_connect_client.processor');
+
+  /** @var \Drupal\Core\Config\ConfigFactoryInterface $config */
+  $config = \Drupal::configFactory();
+
+  $clients_enabled = array();
+  foreach ($pluginManager->getDefinitions() as $client_plugin) {
+    $enabled = $config->get('openid_connect.settings.' . $client_plugin['id'])->get('enabled');
+    if ($enabled) {
+      $clients_enabled[$client_plugin['id']] = $config->get('openid_connect.settings.' . $client_plugin['id'])->get('settings');
+    }
+  }
+
+  return $clients_enabled;
+}
+
+/**
+ * @param $client_id
+ * @return \Drupal\openid_connect\Plugin\OpenIDConnectClientInterface
+ */
+function _openid_connect_sso_client_get_client($client_id = NULL) {
+  if (!$client_id) {
+    // @todo: use configuration: openid_connect_sso_client.settings.client_id!
+    $clients_enabled_configuration = _openid_connect_sso_get_enabled_clients_configuration();
+    if (!count($clients_enabled_configuration)) {
+      throw new \Exception('No enabled openid_connect clients found!');
+    }
+    $client_id = key($clients_enabled_configuration);
+    $configuration = $clients_enabled_configuration[$client_id];
+  }
+  else {
+    $configuration = \Drupal::config('openid_connect.settings.' . $client_id)->get('settings');
+  }
+
+  /** @var \Drupal\openid_connect\Plugin\OpenIDConnectClientManager $pluginManager */
+  $pluginManager = \Drupal::service('plugin.manager.openid_connect_client.processor');
+
+  return $pluginManager->createInstance(
+    $client_id,
+    $configuration
+  );
+}
+
+/**
+ * Returns all openid_connect scopes.
+ *
+ * @return string
+ */
+function _openid_connect_sso_client_get_scopes() {
+  /** @var \Drupal\openid_connect\Claims $claims */
+  $claims = \Drupal::service('openid_connect.claims');
+  return $claims->getScopes();
+}

@@ -1,0 +1,182 @@
+<?php
+
+/**
+ * @file
+ * Provides basic SSO functionality.
+ */
+
+/**
+ * Get the configured cookie domain.
+ *
+ * @return string
+ */
+function openid_connect_sso_get_cookie_domain() {
+  $cookie_domain = \Drupal::config('openid_connect_sso.settings')->get('cookie_domain');
+  // @see also https://www.drupal.org/files/issues/cookie_name_fix_when_cookie_variable_is_empty-2513282-3.patch
+  if (empty($cookie_domain)) {
+    $cookie_domain = $_SERVER['HTTP_HOST'];
+  }
+  return ltrim($cookie_domain, '.');
+}
+
+/**
+ * Get the cookie name for a given operation.
+ *
+ * @param string $op
+ *   The operation: 'logout' or 'login'.
+ * @param bool $as_key
+ *   Whether to return the name as appropriate for an array key in $_COOKIE,
+ *   i.e. with '.' replaced with '_'.
+ * @param bool $with_domain
+ *   Whether to add the domain name to the cookie name.
+ *
+ * @throws InvalidArgumentException for an invalid $op
+ *
+ * @return string
+ */
+function openid_connect_sso_get_cookie_name($op, $as_key = FALSE, $with_domain = FALSE) {
+  switch ($op) {
+    case 'logout':
+      $cookie_name = 'Drupal.visitor.SSOLogout';
+      break;
+
+    case 'login':
+      $cookie_name = 'Drupal.visitor.SSOLogin';
+      break;
+
+    default:
+      throw new InvalidArgumentException('Invalid operation: ' . $op);
+  }
+  if ($with_domain) {
+    $cookie_name .= '_' . openid_connect_sso_get_cookie_domain();
+  }
+  if ($as_key) {
+    return str_replace('.', '_', $cookie_name);
+  }
+  return $cookie_name;
+}
+
+/**
+ * Detect whether a valid cookie is set for the correct domain.
+ *
+ * @param string $op
+ *   The operation: 'logout' or 'login'.
+ *
+ * @return bool
+ *   TRUE if the cookie is set, FALSE if not.
+ */
+function openid_connect_sso_detect_cookie($op) {
+  $name_as_key = openid_connect_sso_get_cookie_name($op, TRUE);
+  if (!empty($_COOKIE[$name_as_key])) {
+    return TRUE;
+  }
+  $with_domain = openid_connect_sso_get_cookie_name($op, TRUE, TRUE);
+  return !empty($_COOKIE[$with_domain]);
+}
+
+/**
+ * Ensure that a cookie is removed for the correct domain.
+ *
+ * @param string $op
+ */
+function openid_connect_sso_remove_cookie($op) {
+  $cookie_name = openid_connect_sso_get_cookie_name($op);
+  $name_as_key = openid_connect_sso_get_cookie_name($op, TRUE);
+  $cookie_domain = openid_connect_sso_get_cookie_domain();
+  if (isset($_COOKIE[$name_as_key])) {
+    setcookie($cookie_name, '', time() - 3600, '/', $cookie_domain);
+    unset($_COOKIE[$name_as_key]);
+  }
+  $extended_name_as_key = $name_as_key . '_' . str_replace('.', '_', $cookie_domain);
+  if (isset($_COOKIE[$extended_name_as_key])) {
+    $extended_name = $cookie_name . '_' . $cookie_domain;
+    setcookie($extended_name, '', time() - 3600, '/', $cookie_domain);
+    unset($_COOKIE[$extended_name_as_key]);
+  }
+}
+
+/**
+ * Implements hook_user_login().
+ *
+ * Request a redirect after a successful login.
+ */
+function openid_connect_sso_user_login($account) {
+  // The presence of a cookie or session param would indicate that the user
+  // is already in the middle of logging into the network.
+  $has_cookie = openid_connect_sso_detect_cookie('login');
+  $has_session_param = isset($_SESSION['oauth2_server_authorize']);
+  if (!$has_cookie && !$has_session_param) {
+    openid_connect_sso_set_redirect('login');
+  }
+
+  if ($has_cookie) {
+    openid_connect_sso_remove_cookie('login');
+  }
+}
+
+/**
+ * Implements hook_user_logout().
+ *
+ * Request a redirect after a successful logout.
+ */
+function openid_connect_sso_user_logout($account) {
+  // The presence of a cookie would indicate that the user is already
+  // in the middle of logging out of the network.
+  if (!openid_connect_sso_detect_cookie('logout')) {
+    openid_connect_sso_set_redirect('logout');
+  }
+  else {
+    // Remove the cookie, it has done its purpose.
+    openid_connect_sso_remove_cookie('logout');
+  }
+}
+
+/**
+ * Sets an SSO redirect to be performed on page shutdown.
+ *
+ * @param $type
+ *   The type of redirect to perform. "login" or "logout".
+ */
+function openid_connect_sso_set_redirect($type = NULL) {
+  $redirect = &drupal_static(__FUNCTION__, NULL);
+  if (isset($type)) {
+    $redirect = $type;
+  }
+
+  return $redirect;
+}
+
+/**
+ * Returns the SSO redirect to be performed on page shutdown, if any.
+ */
+function openid_connect_sso_get_redirect() {
+  return openid_connect_sso_set_redirect();
+}
+
+/**
+ * Returns the SSO script url based on the configured location.
+ */
+function openid_connect_sso_get_script_url() {
+  global $base_url, $is_https;
+
+  $script_url = \Drupal::config('openid_connect_sso.settings')->get('script_url');
+  if ($script_url) {
+    return $script_url;
+  }
+
+  $location = \Drupal::config('openid_connect_sso.settings')->get('script_location');
+
+  if (empty($location)) {
+    $location = 'drupal';
+  }
+
+  if ($location == 'drupal') {
+    $url = $base_url . '/sso.php';
+  }
+  else {
+    $protocol = $is_https ? 'https://' : 'http://';
+    $url = str_replace($protocol, $protocol . 'a.', $base_url);
+  }
+
+  return $url;
+}

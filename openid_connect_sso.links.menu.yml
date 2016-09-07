@@ -1,0 +1,5 @@
+openid_connect_sso.openid_connect_sso_settings_form:
+  title: 'OpenID Connect SSO Settings'
+  parent: system.admin_config_services
+  description: 'Configure the OpenID Connect SSO module.'
+  route_name: openid_connect_sso.openid_connect_sso_settings_form
