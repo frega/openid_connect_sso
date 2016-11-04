@@ -4,3 +4,9 @@ services:
     tags:
       - { name: event_subscriber }
 
+  openid_connect_sso.deny_cache_on_sso_cookie:
+    class: Drupal\openid_connect_sso\DenyCacheOnSSOCookie
+    public: false
+    tags:
+      - { name: page_cache_request_policy }
+      - { name: dynamic_page_cache_request_policy }
