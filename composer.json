@@ -11,6 +11,6 @@
     "source": "https://github.com/frega/openid_connect_sso"
   },
   "require": {
-    "drupal/openid_connect": "^8.1@beta"
+    "drupal/openid_connect": "^1@beta"
   }
 }
